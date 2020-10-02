@@ -1,0 +1,4 @@
+{"word":"ecstatic","synonyms":["glad","happy","joyful"]}
+{"word":"glad","synonyms":["happy","ecstatic","joyful"]}
+{"word":"happy","synonyms":["glad","ecstatic","joyful"]}
+{"word":"joyful","synonyms":["glad","ecstatic","happy"]}

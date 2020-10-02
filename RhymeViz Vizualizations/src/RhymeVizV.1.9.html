@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title> RhymeViz 1.9 </title>
+<script src="../lib/d3.v3.min.js"></script>
+<script src = "http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<script src="../lib/jquery-3.2.1.js"></script>
+<style>
+
+path.link {
+  fill: none;
+  stroke: #666;
+  stroke-width: 2.75px;
+}
+
+circle {
+  fill: #ccc;
+  stroke: #fff;
+  stroke: black;
+  stroke-width: 1.5px;
+}
+
+.d3-tip {
+  line-height: 1;
+  font-weight: bold;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 2px;
+}
+
+text {
+  fill: #000;
+  font: 12px sans-serif;
+  pointer-events: none;
+}
+
+
+</style>
+<header onload="document.getElementById('textBox').value = '';">
+    Input Word:<br>
+    <!-- <form id = "form1"> -->
+      <input type="text" name="inputWord" id="textBox" placeholder="Insert a word"><br>
+      <input type="submit" value="Submit" id="Mcbuttonface" onclick="submitword()"> <br>
+  	  <input type="checkbox" id="ExpCheck"> Explorer Mode 
+	  <input type="checkbox" id="SynCheck" checked> Synonyms 
+	  <input type="checkbox" id="AntCheck"> Antonyms 
+	  <input type="checkbox" id="RhyCheck"> Rhymes 
+    <!-- </form> -->
+</header>
+<body id = "body1">
+<script>
+
+// Assign Value to text box based on keystroke
+$("#textBox").on("keyup change", function() {
+$("#dom_element").text(this.value);
+wordInput=this.value;
+});
+
+var tip = d3.tip()
+  .attr("class", "d3-tip")
+  .html(function(d) {
+    if (d.genre) {
+      console.log(d.genre);
+      return (d.pos.toString() + "\n" + d.genre.toString());
+    } else {
+      console.log(d.pos);
+      return d.pos;
+    }
+  });
+
+// get the data
+function submitword() {
+links2 = jQuery.get("https://romartin-cse6242a.appspot.com/get?word="+wordInput.toString());
+console.log(wordInput.toString());
+links2.done(function(){callAPI(links2);
+  document.getElementById("textBox").value = "";
+  });
+}
+
+function callAPI(links2) {
+
+d3.select("svg").remove();
+links=[];
+ctr=0;
+ctrS=0;
+ctrA=0;
+ctrR=0;
+maxx=20;
+
+links2.responseJSON.forEach(function(link,d) {	
+  //console.log(link.synonyms);
+  //console.log("rymes:"link.rhymes);
+  //console.log("antonyms:" + link.antonyms);
+	link.synonyms.forEach(
+		function(syn,c){
+			flg1=0;
+			flg2=0;
+			links.forEach(function(oldline,k) {
+				if (oldline.source == syn && oldline.target == link.word)	flg1=1;
+				if (oldline.source == link.word || oldline.target == link.word || oldline.source == syn || oldline.target == syn)	flg2=1;});
+			if (ctrS>=maxx && d>0) return;
+			if (flg1==0 && (flg2==1 || links.length==0) && document.getElementById("SynCheck").checked==true) {
+        console.log(link);
+				links[ctr]={"source":[],"target":[], "type":[], "pos": [], "genre": []};	
+				links[ctr].source=link.word;
+				links[ctr].target=syn;
+				links[ctr].type = "synonym";
+        links[ctr].pos = link.pos;
+        links[ctr].genre = link.genres;
+				ctrS++;
+				ctr++;}
+	});
+  link.rhymes.forEach(
+    function(rhy,c){
+      flg1=0;
+	  flg2=0;
+      links.forEach(function(oldline,k) {
+        if (oldline.source == rhy && oldline.target == link.word) flg1=1;
+        if (oldline.source == link.word || oldline.target == link.word || oldline.source == rhy || oldline.target == rhy) flg2=1;});
+	  if (ctrR>=maxx && d>0) return;
+      if (flg1==0 && (flg2==1 || links.length==0) && document.getElementById("RhyCheck").checked==true) {
+        links[ctr]={"source":[],"target":[], "type":[], "pos": [], "genre": []}; 
+        links[ctr].source=link.word;
+        links[ctr].target=rhy;
+        links[ctr].type = "rhyme";
+        links[ctr].pos = link.pos;
+        links[ctr].genre = link.genres;
+		ctrR++;
+        console.log(links[ctr].pos);
+        ctr++;}
+    });
+  link.antonyms.forEach(
+    function(ant,c){
+      flg1=0;
+	  flg2=0;
+      links.forEach(function(oldline,k) {
+        if (oldline.source == ant && oldline.target == link.word) flg1=1;
+        if (oldline.source == link.word || oldline.target == link.word || oldline.source == ant || oldline.target == ant) flg2=1;});
+	  if (ctrA>=maxx && d>0) return;
+      if (flg1==0 && (flg2==1 || links.length==0) && document.getElementById("AntCheck").checked==true) {
+        links[ctr]={"source":[],"target":[], "type":[], "pos": [], "genre": []}; 
+        links[ctr].source=link.word;
+        links[ctr].target=ant;
+        links[ctr].type = "antonym";
+        links[ctr].pos = link.pos;
+        links[ctr].genre = link.genres;
+        console.log(links[ctr].genre);
+		ctrA++;
+        ctr++;}
+    });
+});
+//console.log(links);
+
+
+var nodes = {};
+
+// Compute the distinct nodes from the links.
+links.forEach(function(link) {
+    link.source = nodes[link.source] ||
+        (nodes[link.source] = {name: link.source, type: link.type, pos: link.pos, genre: link.genre});
+    link.target = nodes[link.target] ||
+        (nodes[link.target] = {name: link.target, type: link.type, pos: link.pos, genre: link.genre});
+});
+
+var width = document.getElementById("body1").clientWidth,
+    height = 640,
+    color = d3.scale.category20c();
+
+var force = d3.layout.force()
+    .nodes(d3.values(nodes))
+    .links(links)
+    .size([width, height])
+    .linkDistance(200)
+    .charge(-250)
+    .on("tick", tick)
+    .start();
+
+// Set the range
+var  v = d3.scale.linear().range([0, 100]);
+
+// Scale the range of the data
+v.domain([0, d3.max(links, function(d) { return 3; })]);
+
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+svg.call(tip);
+
+// build the arrow.
+svg.append("svg:defs").selectAll("marker")
+    .data(["end"])      // Different link/path types can be defined here
+  .enter().append("svg:marker")    // This section adds in the arrows
+    .attr("id", String)
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 15)
+    .attr("refY", -1.5)
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 6)
+    .attr("orient", "auto")
+  .append("svg:path")
+    .attr("d", "M0,-5L10,0L0,5");
+
+// add the links and the arrows
+var path = svg.append("svg:g").selectAll("path")
+    .data(force.links())
+  .enter().append("svg:path")
+    .attr("class", function(d) { //console.log(d.type);
+	return "link " + d.type; });
+
+// define the nodes
+var node = svg.selectAll(".node")
+    .data(force.nodes())
+  .enter().append("g")
+    .attr("class", "node")
+    .call(force.drag);
+
+// add the nodes
+var scaleUp= 0.8;
+
+node.append("circle")
+    .attr("r", function(d) {
+      if (d.name == wordInput.toString()) {
+        d.fixed = true;
+        this.style.fill = "yellow";
+        return d.weight * scaleUp+5;
+      }
+      return d.weight*scaleUp / 2.0+5;
+    })
+    .on("dblclick", doubleClick)
+    .on("mouseover", tip.show)
+    .on("mouseout", tip.hide)
+	.style("stroke-width","0");
+	
+	//.on("click", singleClick);
+
+// Add labels
+var label = node.append("text")
+    .text(function (d) { return ("       " + d.name.charAt(0).toUpperCase() + d.name.replace(/_/g, " ").slice(1)); })
+    .style("text-anchor", "left");
+
+// Change color based on value
+path.style("stroke", function(d) {
+  if (d.type == "rhyme") { return "green";
+  } else if (d.type == "synonym") { return "red";
+  } else { return "blue";}
+});
+
+// Double Click to Pin and Change Color
+function doubleClick(d) {
+	if (document.getElementById("ExpCheck").checked==false){
+		if (d.fixed) {
+			this.style.fill = "grey";
+			d.fixed = false;
+		} else {
+			this.style.fill = "yellow";
+			d.fixed = true;
+		};}
+	else {
+		//console.log(d.name);
+		linksnew = jQuery.get("https://romartin-cse6242a.appspot.com/get?word="+d.name);
+		linksnew.done(function(){
+						//console.log(linksnew.responseJSON);
+						if (linksnew.responseJSON.length>0) {							
+							wordInput=d.name;
+							callAPI(linksnew);							
+						}});
+	}	
+}
+
+/*function singleClick(d) {
+	console.log(d.name);
+	linksnew = jQuery.get("https://romartin-cse6242a.appspot.com/get?word="+d.name);
+	linksnew.done(function(){callAPI(linksnew);});
+	
+}*/
+
+// add the curvy lines
+function tick() {
+	if (links2.responseJSON.length > 0){
+    //console.log(nodes)
+    // console.log(wordInput);
+    nodes[wordInput].x = width / 2;
+    nodes[wordInput].y = height / 2;}
+    path.attr("d", function(d) {
+        var dx = d.target.x - d.source.x,
+            dy = d.target.y - d.source.y,
+            dr = Math.sqrt(dx * dx + dy * dy);
+        return "M" +
+            d.source.x + "," +
+            d.source.y + "A" +
+            dr + "," + dr + " 0 0,1 " +
+            d.target.x + "," +
+            d.target.y;
+    });
+
+    node
+        .attr("transform", function(d) {
+		    return "translate(" + d.x + "," + d.y + ")"; });
+
+};
+}
+
+</script>
+</body>
+</html>

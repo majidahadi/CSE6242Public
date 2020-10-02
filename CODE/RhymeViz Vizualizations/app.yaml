@@ -1,0 +1,14 @@
+runtime: python27
+api_version: 1
+threadsafe: true
+
+service: ui
+
+handlers:
+- url: /
+  static_files: src/RhymeVizV.2.4.html
+  upload: src/RhymeVizV.2.4.html
+
+- url: /lib/(.*)
+  static_files: lib/\1
+  upload: lib/(.*)
